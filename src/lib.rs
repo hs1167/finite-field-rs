@@ -20,6 +20,46 @@ impl Fp {
     pub fn value(self) -> u64 { // getter / read only
         self.value
     }
+
+    pub const ZERO: Self = Self { value: 0 };
+    pub const ONE: Self = Self { value: 1 };
+
+    // Computes (self ^ exponent) mod p using the square-and-multiply algorithm.
+    // Runs in O(log(exponent)) time.
+    // Crucial for computing the multiplicative inverse via Fermat's Little Theorem.
+    pub fn pow(self, mut exponent: u64) -> Self {
+        let mut res = Self::ONE;
+        let mut base = self;
+
+        while exponent > 0 {
+            // If the least significant bit is 1, multiply the result by the current base
+            if exponent & 1 == 1 {
+                res = res * base; // Delegates to our Mul trait
+            }
+            
+            // Square the base for the next bit
+            base = base * base;
+            
+            // Shift the exponent right by 1 bit
+            exponent >>= 1;
+        }
+
+        res
+    }
+
+    // Computes the multiplicative inverse of this element using Fermat's Little Theorem.
+    // a^(p-1) ≡ 1 (mod p) => a^(-1) ≡ a^(p-2) (mod p).
+    // Panics if trying to invert zero.
+    pub fn inv(self) -> Self {
+        if self.value == 0 {
+            panic!("Attempted to divide by zero in Fp.");
+        }
+        
+        // p - 2 = 0xfffffffeffffffff
+        self.pow(0xfffffffeffffffff)
+    }
+
+
 }
 
 // Internal law of composition: Addition in the abelian group (Fp, +)
@@ -126,7 +166,8 @@ impl Mul for Fp {
         Self { value: t0 } + Self { value: t1 }
     }
 }
-    
+
+
 
 
 #[cfg(test)]
@@ -287,5 +328,33 @@ mod tests {
         let right = (a * b) + (a * c);
         
         assert_eq!(left.value, right.value);
+    }
+
+    // --- Exponentiation Tests ---
+
+    #[test]
+    fn test_pow_fermat() {
+        // Fermat's Little Theorem: a^(p-1) ≡ 1 (mod p)
+        // This validates both our pow algorithm and our 128-bit multiplication under extreme loads.
+        let p_minus_one = 0xffffffff00000000;
+        let a = Fp { value: 42 }; // Arbitrary non-zero element
+        
+        assert_eq!(a.pow(p_minus_one).value, 1);
+    }
+
+    #[test]
+    fn test_inverse() {
+        let a = Fp { value: 42 };
+        let inv_a = a.inv();
+        
+        // a * a^(-1) ≡ 1 (mod p)
+        assert_eq!((a * inv_a).value, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Attempted to divide by zero")]
+    fn test_inverse_zero() {
+        let zero = Fp { value: 0 };
+        zero.inv(); // This should panic
     }
 }
