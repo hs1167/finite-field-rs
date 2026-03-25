@@ -136,9 +136,6 @@ impl Sub for Fp {
 // X ≡ (H_hi * 2^32 + H_lo) * E + L (mod p)
 // X ≡ H_hi * 2^64 - H_hi * 2^32 + H_lo * E + L (mod p)
 // 
-// Since 2^32 * E = 2^64 - 2^32 ≡ E - 2^32 = -1 (mod p),
-// we get H_hi * 2^32 * E ≡ -H_hi (mod p).
-// 
 // The magic cancellation happens here:
 // X ≡ (H_hi * 2^32 - H_hi) - H_hi * 2^32 + H_lo * E + L (mod p)
 // X ≡ L - H_hi + H_lo * E (mod p)
